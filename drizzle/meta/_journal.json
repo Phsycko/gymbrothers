@@ -1,0 +1,76 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1775174791543,
+      "tag": "0000_faithful_skin",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1775177157234,
+      "tag": "0001_dazzling_smasher",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1775186470553,
+      "tag": "0002_announcements",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1775187806303,
+      "tag": "0003_member_user_role",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1775188763718,
+      "tag": "0004_username_and_member_user_link",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1775189752595,
+      "tag": "0005_training_exercises_routines",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1775190399635,
+      "tag": "0006_exercise_lottie_json",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1775192073450,
+      "tag": "0007_exercise_cover_image",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1775193000000,
+      "tag": "0008_exercise_requests",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1775194000000,
+      "tag": "0009_plans_duration_weeks",
+      "breakpoints": true
+    }
+  ]
+}

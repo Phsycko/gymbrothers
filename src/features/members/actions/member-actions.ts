@@ -2,17 +2,25 @@
 
 import { randomUUID } from "node:crypto";
 
+import { parseISO, startOfDay } from "date-fns";
 import { and, eq, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { selectActivePlanById } from "@/features/plans/lib/plan-db-compat";
+import { computeSubscriptionEndDate } from "@/features/plans/lib/plan-duration";
 import { hashPassword } from "@/lib/auth/password";
 import { isAdminRole } from "@/lib/auth/roles";
 import { isValidUsernameFormat, sanitizeUsername } from "@/lib/auth/username";
 import { validateRequest } from "@/lib/auth/validate-request";
 import { db } from "@/server/db/client";
 import { DATABASE_CONNECTION_ERROR } from "@/server/db/env";
-import { members, subscriptions, users } from "@/server/db/schema/gym-schema";
+import {
+	members,
+	payments,
+	subscriptions,
+	users,
+} from "@/server/db/schema/gym-schema";
 
 /** Auto-generated password for new member portal accounts (hashed at rest). */
 const DEFAULT_MEMBER_PLAIN_PASSWORD = "12345678";
@@ -20,6 +28,10 @@ const DEFAULT_MEMBER_PLAIN_PASSWORD = "12345678";
 const createMemberSchema = z.object({
 	fullName: z.string().trim().min(1, "Name is required").max(255),
 	username: z.string().trim().min(1, "Usuario requerido"),
+	planId: z.string().uuid("Elige un plan"),
+	startDate: z
+		.string()
+		.regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de fecha inválido (AAAA-MM-DD)"),
 });
 
 /** Correo técnico único derivado del usuario (el alta solo pide nombre + usuario). */
@@ -206,7 +218,7 @@ export async function createMemberAction(
 		};
 	}
 
-	const { fullName } = parsed.data;
+	const { fullName, planId, startDate: startDateRaw } = parsed.data;
 	const username = sanitizeUsername(parsed.data.username);
 	if (!isValidUsernameFormat(username)) {
 		return {
@@ -224,6 +236,32 @@ export async function createMemberAction(
 	const phone = "";
 	const qrIdentifier = randomUUID();
 	const hashedPassword = await hashPassword(DEFAULT_MEMBER_PLAIN_PASSWORD);
+
+	const startDateParsed = startOfDay(parseISO(startDateRaw));
+	if (Number.isNaN(startDateParsed.getTime())) {
+		return {
+			ok: false,
+			error: "Fecha de inicio inválida.",
+			fieldErrors: { startDate: ["Elige una fecha válida"] },
+		};
+	}
+
+	let plan: NonNullable<Awaited<ReturnType<typeof selectActivePlanById>>>;
+	try {
+		const row = await selectActivePlanById(planId);
+		if (!row) {
+			return {
+				ok: false,
+				error: "El plan seleccionado no está disponible.",
+				fieldErrors: { planId: ["Elige otro plan"] },
+			};
+		}
+		plan = row;
+	} catch {
+		return { ok: false, error: DATABASE_CONNECTION_ERROR };
+	}
+
+	const endDate = computeSubscriptionEndDate(startDateParsed, plan);
 
 	try {
 		const dupMember = await db
@@ -279,22 +317,58 @@ export async function createMemberAction(
 				throw new Error("USER_INSERT_FAILED");
 			}
 
-			await tx.insert(members).values({
-				userId: u.id,
-				fullName,
-				email: emailNorm,
-				phone,
-				qrIdentifier,
-				status: "active",
+			const [m] = await tx
+				.insert(members)
+				.values({
+					userId: u.id,
+					fullName,
+					email: emailNorm,
+					phone,
+					qrIdentifier,
+					status: "active",
+				})
+				.returning({ id: members.id });
+
+			if (!m) {
+				throw new Error("MEMBER_INSERT_FAILED");
+			}
+
+			const [sub] = await tx
+				.insert(subscriptions)
+				.values({
+					memberId: m.id,
+					planId: plan.id,
+					startDate: startDateParsed,
+					endDate,
+					autoRenew: false,
+				})
+				.returning({ id: subscriptions.id });
+
+			if (!sub) {
+				throw new Error("SUBSCRIPTION_INSERT_FAILED");
+			}
+
+			await tx.insert(payments).values({
+				subscriptionId: sub.id,
+				amountCents: plan.priceCents,
+				status: "completed",
+				providerRef: "manual:member_signup",
 			});
 		});
 
 		revalidatePath("/dashboard/members");
 		revalidatePath("/dashboard/member");
+		revalidatePath("/dashboard/payments");
 		return { ok: true };
 	} catch (err) {
 		if (err instanceof Error && err.message === "USER_INSERT_FAILED") {
 			return { ok: false, error: "No se pudo crear la cuenta." };
+		}
+		if (err instanceof Error && err.message === "MEMBER_INSERT_FAILED") {
+			return { ok: false, error: "No se pudo registrar el socio." };
+		}
+		if (err instanceof Error && err.message === "SUBSCRIPTION_INSERT_FAILED") {
+			return { ok: false, error: "No se pudo crear la suscripción." };
 		}
 		return { ok: false, error: DATABASE_CONNECTION_ERROR };
 	}

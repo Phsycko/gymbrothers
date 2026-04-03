@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 
 import { Input } from "@/components/ui/input";
 
+import type { PlanPickerPlan } from "@/features/members/components/add-member-form";
 import type { MemberListRow } from "@/features/members/lib/get-members";
 
 import { AddMemberDialog } from "./add-member-dialog";
@@ -12,6 +13,7 @@ import { MemberTable } from "./member-table";
 
 export interface MembersViewProps {
 	initialMembers: MemberListRow[];
+	plans: PlanPickerPlan[];
 }
 
 function normalize(s: string): string {
@@ -20,6 +22,7 @@ function normalize(s: string): string {
 
 export function MembersView({
 	initialMembers,
+	plans,
 }: MembersViewProps): React.ReactElement {
 	const [query, setQuery] = useState("");
 
@@ -51,7 +54,7 @@ export function MembersView({
 						Listado administrativo — busca por nombre o correo.
 					</p>
 				</div>
-				<AddMemberDialog />
+				<AddMemberDialog plans={plans} />
 			</div>
 
 			<div className="relative max-w-md">

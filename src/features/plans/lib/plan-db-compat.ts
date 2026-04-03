@@ -1,4 +1,4 @@
-import { asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 
 import { db } from "@/server/db/client";
 import type { Plan, Subscription } from "@/server/db/schema/gym-schema";
@@ -57,6 +57,55 @@ export async function selectAllPlansOrdered(): Promise<Plan[]> {
 			.select(planRowSansWeeksColumn)
 			.from(plans)
 			.orderBy(desc(plans.createdAt));
+	}
+}
+
+export type ActivePlanRow = {
+	id: string;
+	name: string;
+	priceCents: number;
+	durationMonths: number;
+	durationWeeks: number | null;
+	active: boolean;
+};
+
+/**
+ * Plan activo por id (para alta de socio / suscripción con fecha de inicio).
+ */
+export async function selectActivePlanById(
+	planId: string,
+): Promise<ActivePlanRow | null> {
+	try {
+		const [row] = await db
+			.select({
+				id: plans.id,
+				name: plans.name,
+				priceCents: plans.priceCents,
+				durationMonths: plans.durationMonths,
+				durationWeeks: plans.durationWeeks,
+				active: plans.active,
+			})
+			.from(plans)
+			.where(and(eq(plans.id, planId), eq(plans.active, true)))
+			.limit(1);
+		return row ?? null;
+	} catch (e) {
+		if (!isMissingDurationWeeksColumnError(e)) {
+			throw e;
+		}
+		const [row] = await db
+			.select({
+				id: plans.id,
+				name: plans.name,
+				priceCents: plans.priceCents,
+				durationMonths: plans.durationMonths,
+				durationWeeks: sql<number | null>`NULL::integer`,
+				active: plans.active,
+			})
+			.from(plans)
+			.where(and(eq(plans.id, planId), eq(plans.active, true)))
+			.limit(1);
+		return row ?? null;
 	}
 }
 

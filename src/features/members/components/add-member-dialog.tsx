@@ -14,9 +14,15 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
-import { AddMemberForm } from "./add-member-form";
+import { AddMemberForm, type PlanPickerPlan } from "./add-member-form";
 
-export function AddMemberDialog(): React.ReactElement {
+export interface AddMemberDialogProps {
+	plans: PlanPickerPlan[];
+}
+
+export function AddMemberDialog({
+	plans,
+}: AddMemberDialogProps): React.ReactElement {
 	const [open, setOpen] = useState(false);
 
 	return (
@@ -32,18 +38,29 @@ export function AddMemberDialog(): React.ReactElement {
 					)}
 				>
 					<UserPlus className="h-4 w-4 stroke-[2.5] text-white" aria-hidden />
-					Add Member
+					Añadir socio
 				</Button>
 			</DialogTrigger>
-			<DialogContent className="border-slate-800 bg-slate-950 sm:max-w-md">
+			<DialogContent
+				className="max-h-[90vh] overflow-y-auto border-slate-800 bg-slate-950 sm:max-w-lg"
+				onPointerDownOutside={(e) => {
+					const t = e.target as HTMLElement;
+					if (
+						t.closest("[data-radix-popper-content-wrapper]") ||
+						t.closest("[data-radix-select-content]")
+					) {
+						e.preventDefault();
+					}
+				}}
+			>
 				<DialogHeader>
-					<DialogTitle className="text-slate-50">Add member</DialogTitle>
-					<DialogDescription>
-						Register a brother — a unique QR identifier is generated
-						automatically.
+					<DialogTitle className="text-slate-50">Nuevo socio</DialogTitle>
+					<DialogDescription className="text-slate-400">
+						Datos de acceso, plan y fecha de inicio. Se genera un QR único y la
+						vigencia se calcula según el plan (semanal o mensual).
 					</DialogDescription>
 				</DialogHeader>
-				<AddMemberForm onSuccess={() => setOpen(false)} />
+				<AddMemberForm plans={plans} onSuccess={() => setOpen(false)} />
 			</DialogContent>
 		</Dialog>
 	);

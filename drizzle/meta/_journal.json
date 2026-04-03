@@ -50,6 +50,13 @@
       "when": 1775190399635,
       "tag": "0006_exercise_lottie_json",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1775192073450,
+      "tag": "0007_exercise_cover_image",
+      "breakpoints": true
     }
   ]
 }

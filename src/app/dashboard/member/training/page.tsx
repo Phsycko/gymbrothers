@@ -26,7 +26,7 @@ export default async function MemberTrainingPage(): Promise<React.ReactElement> 
 	const exercisesById = new Map(exercises.map((e) => [e.id, e]));
 
 	return (
-		<div className="space-y-12">
+		<div className="min-w-0 space-y-12 overflow-x-hidden">
 			<MemberTrainingView exercises={exercises} />
 			<MemberRoutinesSection
 				routines={routines}

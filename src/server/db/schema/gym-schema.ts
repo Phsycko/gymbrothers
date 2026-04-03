@@ -185,9 +185,11 @@ export const exercises = pgTable(
 		description: text("description").notNull().default(""),
 		/** Primary taxonomy: chest, back, legs, etc. */
 		muscleGroup: muscleGroupEnum("muscle_group").notNull(),
+		/** Cover image URL for member library cards (muscle map / thumbnail). */
+		coverImageUrl: text("cover_image_url"),
 		/** Lottie JSON (Iconscout / LottieFiles). Primary media for member cards when set. */
 		lottieJson: text("lottie_json"),
-		/** Legacy / fallback: YouTube, Vimeo, or https embed. Optional if Lottie is set. */
+		/** YouTube / embed URL — opened in modal, not on the card. */
 		videoUrl: text("video_url").notNull().default(""),
 		/** Execution notes + "Tips de los Brothers" (admin). */
 		formTips: text("form_tips").notNull().default(""),

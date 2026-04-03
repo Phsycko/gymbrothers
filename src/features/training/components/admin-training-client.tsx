@@ -153,6 +153,7 @@ function ExercisesPanel({
 						<TableRow className="border-slate-800 hover:bg-transparent">
 							<TableHead className="text-slate-500">Nombre</TableHead>
 							<TableHead className="text-slate-500">Grupo</TableHead>
+							<TableHead className="text-slate-500">Portada</TableHead>
 							<TableHead className="text-slate-500">Lottie</TableHead>
 							<TableHead className="max-w-[160px] text-slate-500">Video</TableHead>
 							<TableHead className="w-[100px] text-right text-slate-500">
@@ -164,7 +165,7 @@ function ExercisesPanel({
 						{exercises.length === 0 ? (
 							<TableRow>
 								<TableCell
-									colSpan={5}
+									colSpan={6}
 									className="py-12 text-center text-sm text-slate-500"
 								>
 									Aún no hay ejercicios.
@@ -176,6 +177,13 @@ function ExercisesPanel({
 									<TableCell className="font-medium text-white">{ex.name}</TableCell>
 									<TableCell className="text-slate-400">
 										{muscleGroupLabelEs[ex.muscleGroup]}
+									</TableCell>
+									<TableCell className="text-xs">
+										{ex.coverImageUrl?.trim() ? (
+											<span className="text-sky-400/90">URL</span>
+										) : (
+											<span className="text-slate-600">Defecto</span>
+										)}
 									</TableCell>
 									<TableCell className="text-xs">
 										{parseLottieJsonString(ex.lottieJson) ? (

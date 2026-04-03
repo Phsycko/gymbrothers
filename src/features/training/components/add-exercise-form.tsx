@@ -42,6 +42,7 @@ export function AddExerciseForm({
 	const [name, setName] = useState("");
 	const [muscleGroup, setMuscleGroup] = useState<Exercise["muscleGroup"]>("chest");
 	const [description, setDescription] = useState("");
+	const [coverImageUrl, setCoverImageUrl] = useState("");
 	const [videoUrl, setVideoUrl] = useState("");
 	const [lottieJson, setLottieJson] = useState("");
 	const [formTips, setFormTips] = useState("");
@@ -51,6 +52,7 @@ export function AddExerciseForm({
 		setName(exercise?.name ?? "");
 		setMuscleGroup(exercise?.muscleGroup ?? "chest");
 		setDescription(exercise?.description ?? "");
+		setCoverImageUrl(exercise?.coverImageUrl ?? "");
 		setVideoUrl(exercise?.videoUrl ?? "");
 		setLottieJson(exercise?.lottieJson ?? "");
 		setFormTips(exercise?.formTips ?? "");
@@ -64,6 +66,7 @@ export function AddExerciseForm({
 				name,
 				description,
 				muscleGroup,
+				coverImageUrl,
 				lottieJson,
 				videoUrl,
 				formTips,
@@ -89,8 +92,8 @@ export function AddExerciseForm({
 					{exercise ? "Editar ejercicio" : "Nuevo ejercicio"}
 				</DialogTitle>
 				<DialogDescription>
-					Enlace de YouTube (recomendado para la app socio) o JSON Lottie. Al menos
-					uno de los dos es obligatorio.
+					Portada (URL), YouTube en modal y opcional Lottie. Al menos YouTube o
+					Lottie es obligatorio.
 				</DialogDescription>
 			</DialogHeader>
 
@@ -122,6 +125,17 @@ export function AddExerciseForm({
 							))}
 						</SelectContent>
 					</Select>
+				</div>
+				<div className="grid gap-2">
+					<Label htmlFor="ex-cover">URL de portada (muscle map / imagen)</Label>
+					<Input
+						id="ex-cover"
+						type="url"
+						value={coverImageUrl}
+						onChange={(e) => setCoverImageUrl(e.target.value)}
+						placeholder="https://… (opcional — si vacío, portada por defecto)"
+						className="border-slate-800 bg-black/40"
+					/>
 				</div>
 				<div className="grid gap-2">
 					<Label htmlFor="ex-youtube">YouTube Video Link</Label>

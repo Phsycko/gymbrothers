@@ -32,6 +32,8 @@ const exerciseUpsertSchema = z
 		name: z.string().trim().min(1, "Nombre requerido").max(255),
 		description: z.string().default(""),
 		muscleGroup: muscleGroupSchema,
+		/** Cover image URL for member cards (HTTPS). */
+		coverImageUrl: z.string().max(2000).default(""),
 		/** Raw Lottie JSON string from Iconscout / LottieFiles (primary media). */
 		lottieJson: z.string().max(500_000).default(""),
 		/** Legacy / fallback embed URL when Lottie is not set. */
@@ -66,6 +68,18 @@ const exerciseUpsertSchema = z
 					code: z.ZodIssueCode.custom,
 					message: "URL de video inválida.",
 					path: ["videoUrl"],
+				});
+			}
+		}
+		const coverTrim = data.coverImageUrl.trim();
+		if (coverTrim.length > 0) {
+			try {
+				new URL(coverTrim);
+			} catch {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					message: "URL de portada inválida.",
+					path: ["coverImageUrl"],
 				});
 			}
 		}
@@ -116,16 +130,19 @@ export async function createExerciseAction(
 			f.name?.[0] ??
 			f.lottieJson?.[0] ??
 			f.videoUrl?.[0] ??
+			f.coverImageUrl?.[0] ??
 			f.muscleGroup?.[0] ??
 			"Datos inválidos";
 		return { ok: false, error: msg };
 	}
 	try {
 		const lj = parsed.data.lottieJson.trim();
+		const cover = parsed.data.coverImageUrl.trim();
 		await db.insert(exercises).values({
 			name: parsed.data.name,
 			description: parsed.data.description,
 			muscleGroup: parsed.data.muscleGroup,
+			coverImageUrl: cover.length > 0 ? cover : null,
 			lottieJson: lj.length > 0 ? lj : null,
 			videoUrl: parsed.data.videoUrl.trim(),
 			formTips: parsed.data.formTips,
@@ -155,12 +172,14 @@ export async function updateExerciseAction(
 	try {
 		const { exerciseId, ...rest } = parsed.data;
 		const lj = rest.lottieJson.trim();
+		const cover = rest.coverImageUrl.trim();
 		await db
 			.update(exercises)
 			.set({
 				name: rest.name,
 				description: rest.description,
 				muscleGroup: rest.muscleGroup,
+				coverImageUrl: cover.length > 0 ? cover : null,
 				lottieJson: lj.length > 0 ? lj : null,
 				videoUrl: rest.videoUrl.trim(),
 				formTips: rest.formTips,

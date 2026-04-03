@@ -103,7 +103,7 @@ export function MemberTrainingView({
 						No hay ejercicios en esta categoría todavía.
 					</div>
 				) : (
-					<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+					<div className="grid min-w-0 grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
 						{filtered.map((ex) => (
 							<ExerciseCard key={ex.id} exercise={ex} />
 						))}

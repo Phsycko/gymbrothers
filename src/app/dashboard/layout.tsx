@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { MemberDashboardShell } from "@/components/layout/member-dashboard-shell";
+import { getAdminNotificationAlerts } from "@/features/dashboard/lib/get-admin-notification-alerts";
 import { isMemberRole } from "@/lib/auth/roles";
 import { validateRequest } from "@/lib/auth/validate-request";
 
@@ -19,5 +20,10 @@ export default async function DashboardLayout({
 			<MemberDashboardShell user={user}>{children}</MemberDashboardShell>
 		);
 	}
-	return <DashboardShell user={user}>{children}</DashboardShell>;
+	const notificationAlerts = await getAdminNotificationAlerts();
+	return (
+		<DashboardShell user={user} notificationAlerts={notificationAlerts}>
+			{children}
+		</DashboardShell>
+	);
 }

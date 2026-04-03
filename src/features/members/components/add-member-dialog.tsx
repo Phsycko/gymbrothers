@@ -31,8 +31,8 @@ export function AddMemberDialog({
 				<Button
 					type="button"
 					className={cn(
-						"h-11 gap-2 rounded-lg border-0 bg-[#E11D48] px-5 text-xs font-extrabold uppercase tracking-[0.18em] text-white",
-						"shadow-[0_0_22px_rgba(225,29,72,0.35)] transition-all",
+						"h-11 w-full gap-2 rounded-lg border-0 bg-[#E11D48] px-5 text-xs font-extrabold uppercase tracking-[0.18em] text-white",
+						"shadow-[0_0_22px_rgba(225,29,72,0.35)] transition-all sm:w-auto",
 						"hover:bg-red-700 hover:shadow-[0_0_32px_rgba(225,29,72,0.55)]",
 						"focus-visible:ring-2 focus-visible:ring-[#E11D48] focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950",
 					)}

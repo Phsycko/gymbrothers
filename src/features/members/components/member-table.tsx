@@ -33,6 +33,7 @@ import { MemberTableRowActions } from "./member-table-row-actions";
 import { QrModal } from "./qr-modal";
 
 const MotionTableRow = motion(TableRow);
+const MotionArticle = motion.article;
 
 const expiryPulseTransition = {
 	duration: 2.2,
@@ -111,9 +112,36 @@ export function MemberTable({
 		return map;
 	}, [members]);
 
+	const rowModels = useMemo(() => {
+		return members.map((m) => {
+			const pulse = pulseById.get(m.id) ?? false;
+			const end = m.subscriptionEndDate;
+			const membershipActive = isMembershipActiveFromEndDate(end);
+			const isExpiredDisplay = m.status !== "inactive" && !membershipActive;
+			const dateLabel = end ? format(end, "d MMM yyyy", { locale: es }) : "—";
+			const rowClass = cn(
+				"border-b border-slate-800/50 transition-colors",
+				pulse
+					? "bg-red-950/[0.12]"
+					: isExpiredDisplay
+						? "bg-red-950/[0.08]"
+						: "hover:bg-red-950/10",
+			);
+			return {
+				m,
+				pulse,
+				end,
+				membershipActive,
+				isExpiredDisplay,
+				dateLabel,
+				rowClass,
+			};
+		});
+	}, [members, pulseById]);
+
 	if (members.length === 0) {
 		return (
-			<div className="rounded-lg border border-dashed border-slate-800/80 bg-slate-950/30 px-6 py-14 text-center">
+			<div className="rounded-lg border border-dashed border-slate-800/80 bg-slate-950/30 px-4 py-12 text-center sm:px-6 sm:py-14">
 				<p className="text-sm text-slate-500">{emptyMessage}</p>
 			</div>
 		);
@@ -122,142 +150,247 @@ export function MemberTable({
 	return (
 		<TooltipProvider delayDuration={200}>
 			<>
-				<div className="overflow-hidden rounded-lg border border-slate-800/60 bg-slate-950/40">
-					<Table className="border-0">
-						<TableHeader>
-							<TableRow className="border-b border-slate-800/60 hover:bg-transparent">
-								<TableHead className="text-slate-500">Socio</TableHead>
-								<TableHead className="text-slate-500">Teléfono</TableHead>
-								<TableHead className="text-slate-500">Estado</TableHead>
-								<TableHead className="min-w-[140px] text-slate-500">
-									Vencimiento
-								</TableHead>
-								<TableHead className="min-w-[200px] text-right text-slate-500">
-									Acciones
-								</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody className="[&_tr]:border-slate-800/50">
-							{members.map((m) => {
-								const pulse = pulseById.get(m.id) ?? false;
-								const end = m.subscriptionEndDate;
-								const membershipActive = isMembershipActiveFromEndDate(end);
-								const isExpiredDisplay =
-									m.status !== "inactive" && !membershipActive;
-								const rowClass = cn(
-									"border-b border-slate-800/50 transition-colors",
-									pulse
-										? "bg-red-950/[0.12]"
-										: isExpiredDisplay
-											? "bg-red-950/[0.08]"
-											: "hover:bg-red-950/10",
-								);
-
-								const dateLabel = end
-									? format(end, "d MMM yyyy", { locale: es })
-									: "—";
-
-								const cells = (
-									<>
-										<TableCell>
-											<div className="flex flex-col gap-0.5">
-												<span className="font-semibold text-white">
-													{m.fullName}
-												</span>
-												<span className="text-sm text-slate-400">
-													{m.email}
-												</span>
-											</div>
-										</TableCell>
-										<TableCell className="text-slate-300">
-											{m.phone?.trim() ? (
-												<span className="font-mono text-sm">{m.phone}</span>
-											) : (
-												<span className="text-slate-600">—</span>
+				{/* Móvil: tarjetas */}
+				<div className="space-y-3 md:hidden">
+					{rowModels.map(({ m, pulse, end, isExpiredDisplay, dateLabel }) => {
+						const card = (
+							<div className="space-y-3">
+								<div className="flex flex-col gap-1">
+									<span className="font-semibold leading-tight text-white">
+										{m.fullName}
+									</span>
+									<span className="break-all text-sm text-slate-400">
+										{m.email}
+									</span>
+								</div>
+								<div className="flex flex-wrap items-center gap-2 text-sm">
+									<span className="text-slate-500">Tel.</span>
+									{m.phone?.trim() ? (
+										<span className="font-mono text-slate-300">{m.phone}</span>
+									) : (
+										<span className="text-slate-600">—</span>
+									)}
+								</div>
+								<div className="flex flex-wrap items-center gap-2">
+									<MembershipStatusBadge
+										dbStatus={m.status}
+										subscriptionEndDate={m.subscriptionEndDate}
+									/>
+									<div className="flex min-w-0 flex-1 items-center gap-2">
+										<span className="text-xs text-slate-500">Vence</span>
+										<span
+											className={cn(
+												"text-sm tabular-nums",
+												pulse
+													? "font-bold text-[#E11D48]"
+													: isExpiredDisplay && end
+														? "font-semibold text-[#E11D48]"
+														: end
+															? "text-slate-400"
+															: "text-slate-600",
 											)}
-										</TableCell>
-										<TableCell>
-											<MembershipStatusBadge
-												dbStatus={m.status}
-												subscriptionEndDate={m.subscriptionEndDate}
-											/>
-										</TableCell>
-										<TableCell>
-											<div className="flex items-center gap-2">
-												<span
-													className={cn(
-														"text-sm tabular-nums",
-														pulse
-															? "font-bold text-[#E11D48]"
-															: isExpiredDisplay && end
-																? "font-semibold text-[#E11D48]"
-																: end
-																	? "text-slate-400"
-																	: "text-slate-600",
-													)}
-												>
-													{dateLabel}
-												</span>
-												{pulse ? (
-													<Tooltip>
-														<TooltipTrigger asChild>
-															<button
-																type="button"
-																className="inline-flex shrink-0 rounded-md text-[#E11D48] outline-none ring-offset-slate-950 focus-visible:ring-2 focus-visible:ring-[#E11D48]/50"
-																aria-label="Por vencer: cobrar"
-															>
-																<AlertTriangle className="h-4 w-4" />
-															</button>
-														</TooltipTrigger>
-														<TooltipContent
-															side="top"
-															className="max-w-[240px] border-red-900/40 bg-slate-950 text-slate-100"
-														>
-															Expiring Soon — Collect Payment
-														</TooltipContent>
-													</Tooltip>
-												) : null}
-											</div>
-										</TableCell>
-										<TableCell className="text-right">
-											<MemberTableRowActions
-												member={m}
-												plans={plans}
-												onViewQr={() =>
-													setPreview({
-														fullName: m.fullName,
-														qrIdentifier: m.qrIdentifier,
-													})
-												}
-											/>
-										</TableCell>
-									</>
-								);
-
-								if (pulse) {
-									return (
-										<MotionTableRow
-											key={m.id}
-											className={rowClass}
-											initial={false}
-											animate={{
-												boxShadow: expiryPulseShadow,
-											}}
-											transition={expiryPulseTransition}
 										>
-											{cells}
-										</MotionTableRow>
-									);
-								}
+											{dateLabel}
+										</span>
+										{pulse ? (
+											<Tooltip>
+												<TooltipTrigger asChild>
+													<button
+														type="button"
+														className="inline-flex shrink-0 rounded-md text-[#E11D48] outline-none ring-offset-slate-950 focus-visible:ring-2 focus-visible:ring-[#E11D48]/50"
+														aria-label="Por vencer: cobrar"
+													>
+														<AlertTriangle className="h-4 w-4" />
+													</button>
+												</TooltipTrigger>
+												<TooltipContent
+													side="top"
+													className="max-w-[240px] border-red-900/40 bg-slate-950 text-slate-100"
+												>
+													Pronto vence — cobrar
+												</TooltipContent>
+											</Tooltip>
+										) : null}
+									</div>
+								</div>
+								<div className="border-t border-slate-800/60 pt-2">
+									<MemberTableRowActions
+										member={m}
+										plans={plans}
+										onViewQr={() =>
+											setPreview({
+												fullName: m.fullName,
+												qrIdentifier: m.qrIdentifier,
+											})
+										}
+									/>
+								</div>
+							</div>
+						);
 
-								return (
-									<TableRow key={m.id} className={rowClass}>
-										{cells}
-									</TableRow>
-								);
-							})}
-						</TableBody>
-					</Table>
+						const inner = (
+							<div
+								className={cn(
+									"rounded-xl border border-slate-800/70 bg-slate-950/50 p-4",
+									pulse && "ring-1 ring-[#E11D48]/25",
+								)}
+							>
+								{card}
+							</div>
+						);
+
+						if (pulse) {
+							return (
+								<MotionArticle
+									key={m.id}
+									className="overflow-hidden rounded-xl"
+									initial={false}
+									animate={{ boxShadow: expiryPulseShadow }}
+									transition={expiryPulseTransition}
+								>
+									{inner}
+								</MotionArticle>
+							);
+						}
+
+						return (
+							<article key={m.id} className="overflow-hidden rounded-xl">
+								{inner}
+							</article>
+						);
+					})}
+				</div>
+
+				{/* Tablet+: tabla */}
+				<div className="hidden overflow-x-auto md:block">
+					<div className="overflow-hidden rounded-lg border border-slate-800/60 bg-slate-950/40">
+						<Table className="min-w-[640px] border-0">
+							<TableHeader>
+								<TableRow className="border-b border-slate-800/60 hover:bg-transparent">
+									<TableHead className="text-slate-500">Socio</TableHead>
+									<TableHead className="text-slate-500">Teléfono</TableHead>
+									<TableHead className="text-slate-500">Estado</TableHead>
+									<TableHead className="min-w-[140px] text-slate-500">
+										Vencimiento
+									</TableHead>
+									<TableHead className="min-w-[200px] text-right text-slate-500">
+										Acciones
+									</TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody className="[&_tr]:border-slate-800/50">
+								{rowModels.map(
+									({
+										m,
+										pulse,
+										end,
+										isExpiredDisplay,
+										dateLabel,
+										rowClass,
+									}) => {
+										const cells = (
+											<>
+												<TableCell>
+													<div className="flex flex-col gap-0.5">
+														<span className="font-semibold text-white">
+															{m.fullName}
+														</span>
+														<span className="text-sm text-slate-400">
+															{m.email}
+														</span>
+													</div>
+												</TableCell>
+												<TableCell className="text-slate-300">
+													{m.phone?.trim() ? (
+														<span className="font-mono text-sm">{m.phone}</span>
+													) : (
+														<span className="text-slate-600">—</span>
+													)}
+												</TableCell>
+												<TableCell>
+													<MembershipStatusBadge
+														dbStatus={m.status}
+														subscriptionEndDate={m.subscriptionEndDate}
+													/>
+												</TableCell>
+												<TableCell>
+													<div className="flex items-center gap-2">
+														<span
+															className={cn(
+																"text-sm tabular-nums",
+																pulse
+																	? "font-bold text-[#E11D48]"
+																	: isExpiredDisplay && end
+																		? "font-semibold text-[#E11D48]"
+																		: end
+																			? "text-slate-400"
+																			: "text-slate-600",
+															)}
+														>
+															{dateLabel}
+														</span>
+														{pulse ? (
+															<Tooltip>
+																<TooltipTrigger asChild>
+																	<button
+																		type="button"
+																		className="inline-flex shrink-0 rounded-md text-[#E11D48] outline-none ring-offset-slate-950 focus-visible:ring-2 focus-visible:ring-[#E11D48]/50"
+																		aria-label="Por vencer: cobrar"
+																	>
+																		<AlertTriangle className="h-4 w-4" />
+																	</button>
+																</TooltipTrigger>
+																<TooltipContent
+																	side="top"
+																	className="max-w-[240px] border-red-900/40 bg-slate-950 text-slate-100"
+																>
+																	Pronto vence — cobrar
+																</TooltipContent>
+															</Tooltip>
+														) : null}
+													</div>
+												</TableCell>
+												<TableCell className="text-right">
+													<MemberTableRowActions
+														member={m}
+														plans={plans}
+														onViewQr={() =>
+															setPreview({
+																fullName: m.fullName,
+																qrIdentifier: m.qrIdentifier,
+															})
+														}
+													/>
+												</TableCell>
+											</>
+										);
+
+										if (pulse) {
+											return (
+												<MotionTableRow
+													key={m.id}
+													className={rowClass}
+													initial={false}
+													animate={{
+														boxShadow: expiryPulseShadow,
+													}}
+													transition={expiryPulseTransition}
+												>
+													{cells}
+												</MotionTableRow>
+											);
+										}
+
+										return (
+											<TableRow key={m.id} className={rowClass}>
+												{cells}
+											</TableRow>
+										);
+									},
+								)}
+							</TableBody>
+						</Table>
+					</div>
 				</div>
 
 				{preview ? (

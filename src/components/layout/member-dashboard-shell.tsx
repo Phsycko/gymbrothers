@@ -17,9 +17,9 @@ export function MemberDashboardShell({
 	children,
 }: MemberDashboardShellProps): React.ReactElement {
 	return (
-		<div className="min-h-screen bg-black text-white">
+		<div className="min-h-screen min-w-0 bg-black text-white">
 			<MemberHeader user={user} />
-			<main className="mx-auto w-full max-w-lg px-4 pb-28 pt-4 md:max-w-2xl md:px-6 md:pb-24">
+			<main className="mx-auto w-full min-w-0 max-w-lg px-4 pb-[calc(7rem+env(safe-area-inset-bottom,0px))] pt-4 sm:px-5 md:max-w-2xl md:px-6 md:pb-[calc(6rem+env(safe-area-inset-bottom,0px))] lg:max-w-4xl xl:max-w-5xl">
 				{children}
 			</main>
 			<MemberBottomNav />

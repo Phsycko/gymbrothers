@@ -51,9 +51,9 @@ export function MemberTrainingView({
 	}, [exercises, group]);
 
 	return (
-		<div className="space-y-8">
-			<div>
-				<h1 className="text-2xl font-bold tracking-tight text-white">
+		<div className="min-w-0 space-y-6 sm:space-y-8">
+			<div className="min-w-0">
+				<h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
 					Entrenamiento
 				</h1>
 				<p className="mt-1 text-sm text-white/55">

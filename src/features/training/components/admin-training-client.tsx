@@ -77,12 +77,12 @@ export function AdminTrainingClient({
 	}, [exercises]);
 
 	return (
-		<div className="space-y-8">
-			<div>
-				<h1 className="text-2xl font-bold tracking-tight text-white">
+		<div className="space-y-6 sm:space-y-8">
+			<div className="min-w-0">
+				<h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
 					Biblioteca de entrenamiento
 				</h1>
-				<p className="mt-1 text-sm text-slate-400">
+				<p className="mt-1 text-sm leading-relaxed text-slate-400">
 					Videos de YouTube embebidos en la app socio; Lottie opcional. Tips de
 					ejecución y rutinas desde aquí.
 				</p>
@@ -142,10 +142,10 @@ function ExercisesPanel({
 
 	return (
 		<div className="space-y-4">
-			<div className="flex justify-end">
+			<div className="flex justify-stretch sm:justify-end">
 				<Button
 					type="button"
-					className="bg-[#E11D48] hover:bg-red-700"
+					className="h-11 w-full bg-[#E11D48] hover:bg-red-700 sm:h-10 sm:w-auto touch-manipulation"
 					onClick={() => {
 						setEditing(null);
 						setOpen(true);
@@ -156,107 +156,109 @@ function ExercisesPanel({
 				</Button>
 			</div>
 
-			<div className="overflow-hidden rounded-lg border border-slate-800/60 bg-slate-950/40">
-				<Table>
-					<TableHeader>
-						<TableRow className="border-slate-800 hover:bg-transparent">
-							<TableHead className="text-slate-500">Nombre</TableHead>
-							<TableHead className="text-slate-500">Grupo</TableHead>
-							<TableHead className="text-slate-500">Portada</TableHead>
-							<TableHead className="text-slate-500">Lottie</TableHead>
-							<TableHead className="max-w-[160px] text-slate-500">
-								Video
-							</TableHead>
-							<TableHead className="w-[100px] text-right text-slate-500">
-								Acciones
-							</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody>
-						{exercises.length === 0 ? (
-							<TableRow>
-								<TableCell
-									colSpan={6}
-									className="py-12 text-center text-sm text-slate-500"
-								>
-									Aún no hay ejercicios.
-								</TableCell>
+			<div className="-mx-1 overflow-x-auto px-1 sm:mx-0 sm:overflow-visible sm:px-0">
+				<div className="overflow-hidden rounded-lg border border-slate-800/60 bg-slate-950/40">
+					<Table className="min-w-[720px] sm:min-w-0">
+						<TableHeader>
+							<TableRow className="border-slate-800 hover:bg-transparent">
+								<TableHead className="text-slate-500">Nombre</TableHead>
+								<TableHead className="text-slate-500">Grupo</TableHead>
+								<TableHead className="text-slate-500">Portada</TableHead>
+								<TableHead className="text-slate-500">Lottie</TableHead>
+								<TableHead className="max-w-[160px] text-slate-500">
+									Video
+								</TableHead>
+								<TableHead className="w-[100px] text-right text-slate-500">
+									Acciones
+								</TableHead>
 							</TableRow>
-						) : (
-							exercises.map((ex) => (
-								<TableRow key={ex.id} className="border-slate-800/50">
-									<TableCell className="font-medium text-white">
-										{ex.name}
-									</TableCell>
-									<TableCell className="text-slate-400">
-										{muscleGroupLabelEs[ex.muscleGroup]}
-									</TableCell>
-									<TableCell className="text-xs">
-										{ex.coverImageUrl?.trim() ? (
-											<span className="text-sky-400/90">URL</span>
-										) : (
-											<span className="text-slate-600">Defecto</span>
-										)}
-									</TableCell>
-									<TableCell className="text-xs">
-										{parseLottieJsonString(ex.lottieJson) ? (
-											<span className="font-medium text-emerald-400/90">
-												JSON
-											</span>
-										) : (
-											<span className="text-slate-600">—</span>
-										)}
-									</TableCell>
-									<TableCell className="max-w-[160px] truncate text-xs text-slate-500">
-										{ex.videoUrl?.trim() ? ex.videoUrl : "—"}
-									</TableCell>
-									<TableCell className="text-right">
-										<Button
-											type="button"
-											variant="ghost"
-											size="icon"
-											className="text-slate-400 hover:text-white"
-											onClick={() => {
-												setEditing(ex);
-												setOpen(true);
-											}}
-										>
-											<Pencil className="h-4 w-4" />
-										</Button>
-										<Button
-											type="button"
-											variant="ghost"
-											size="icon"
-											className="text-red-400 hover:text-red-300"
-											onClick={() => {
-												void (async () => {
-													if (
-														!confirm(
-															`¿Eliminar "${ex.name}"? Se quitará de las rutinas que lo usen.`,
-														)
-													) {
-														return;
-													}
-													const r = await deleteExerciseAction({
-														exerciseId: ex.id,
-													});
-													if (r.ok) {
-														toast.success("Ejercicio eliminado");
-														onDone();
-													} else {
-														toast.error(r.error);
-													}
-												})();
-											}}
-										>
-											<Trash2 className="h-4 w-4" />
-										</Button>
+						</TableHeader>
+						<TableBody>
+							{exercises.length === 0 ? (
+								<TableRow>
+									<TableCell
+										colSpan={6}
+										className="py-12 text-center text-sm text-slate-500"
+									>
+										Aún no hay ejercicios.
 									</TableCell>
 								</TableRow>
-							))
-						)}
-					</TableBody>
-				</Table>
+							) : (
+								exercises.map((ex) => (
+									<TableRow key={ex.id} className="border-slate-800/50">
+										<TableCell className="font-medium text-white">
+											{ex.name}
+										</TableCell>
+										<TableCell className="text-slate-400">
+											{muscleGroupLabelEs[ex.muscleGroup]}
+										</TableCell>
+										<TableCell className="text-xs">
+											{ex.coverImageUrl?.trim() ? (
+												<span className="text-sky-400/90">URL</span>
+											) : (
+												<span className="text-slate-600">Defecto</span>
+											)}
+										</TableCell>
+										<TableCell className="text-xs">
+											{parseLottieJsonString(ex.lottieJson) ? (
+												<span className="font-medium text-emerald-400/90">
+													JSON
+												</span>
+											) : (
+												<span className="text-slate-600">—</span>
+											)}
+										</TableCell>
+										<TableCell className="max-w-[160px] truncate text-xs text-slate-500">
+											{ex.videoUrl?.trim() ? ex.videoUrl : "—"}
+										</TableCell>
+										<TableCell className="text-right">
+											<Button
+												type="button"
+												variant="ghost"
+												size="icon"
+												className="text-slate-400 hover:text-white"
+												onClick={() => {
+													setEditing(ex);
+													setOpen(true);
+												}}
+											>
+												<Pencil className="h-4 w-4" />
+											</Button>
+											<Button
+												type="button"
+												variant="ghost"
+												size="icon"
+												className="text-red-400 hover:text-red-300"
+												onClick={() => {
+													void (async () => {
+														if (
+															!confirm(
+																`¿Eliminar "${ex.name}"? Se quitará de las rutinas que lo usen.`,
+															)
+														) {
+															return;
+														}
+														const r = await deleteExerciseAction({
+															exerciseId: ex.id,
+														});
+														if (r.ok) {
+															toast.success("Ejercicio eliminado");
+															onDone();
+														} else {
+															toast.error(r.error);
+														}
+													})();
+												}}
+											>
+												<Trash2 className="h-4 w-4" />
+											</Button>
+										</TableCell>
+									</TableRow>
+								))
+							)}
+						</TableBody>
+					</Table>
+				</div>
 			</div>
 
 			<ExerciseFormDialog
@@ -320,10 +322,10 @@ function RoutinesPanel({
 
 	return (
 		<div className="space-y-4">
-			<div className="flex justify-end">
+			<div className="flex justify-stretch sm:justify-end">
 				<Button
 					type="button"
-					className="bg-[#E11D48] hover:bg-red-700"
+					className="h-11 w-full bg-[#E11D48] hover:bg-red-700 sm:h-10 sm:w-auto touch-manipulation"
 					onClick={() => setCreateOpen(true)}
 				>
 					<Plus className="mr-2 h-4 w-4" />
@@ -331,7 +333,7 @@ function RoutinesPanel({
 				</Button>
 			</div>
 
-			<div className="grid gap-4 sm:grid-cols-2">
+			<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
 				{routines.length === 0 ? (
 					<p className="col-span-full rounded-lg border border-dashed border-slate-800 py-12 text-center text-sm text-slate-500">
 						No hay rutinas. Crea una y asigna ejercicios en orden.
@@ -368,12 +370,12 @@ function RoutinesPanel({
 									</span>
 								)}
 							</p>
-							<div className="mt-3 flex flex-wrap gap-2">
+							<div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
 								<Button
 									type="button"
 									size="sm"
 									variant="outline"
-									className="border-slate-700"
+									className="w-full border-slate-700 sm:w-auto touch-manipulation"
 									onClick={() => setEditMetaRoutine(r)}
 								>
 									Editar rutina
@@ -382,7 +384,7 @@ function RoutinesPanel({
 									type="button"
 									size="sm"
 									variant="outline"
-									className="border-slate-700"
+									className="w-full border-slate-700 sm:w-auto touch-manipulation"
 									onClick={() => setEditRoutine(r)}
 								>
 									Orden de ejercicios
@@ -391,7 +393,7 @@ function RoutinesPanel({
 									type="button"
 									size="sm"
 									variant="ghost"
-									className="text-red-400"
+									className="w-full text-red-400 sm:w-auto touch-manipulation"
 									onClick={() => {
 										void (async () => {
 											if (!confirm(`¿Eliminar rutina "${r.name}"?`)) {

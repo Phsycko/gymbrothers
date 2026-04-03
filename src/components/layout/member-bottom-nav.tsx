@@ -22,10 +22,10 @@ export function MemberBottomNav(): React.ReactElement {
 	const pathname = usePathname();
 	return (
 		<nav
-			className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-black/85 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg"
+			className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-black/85 px-safe pb-[env(safe-area-inset-bottom)] backdrop-blur-lg"
 			aria-label="Navegación principal"
 		>
-			<div className="no-scrollbar mx-auto flex max-w-lg min-w-0 items-stretch justify-start gap-1 overflow-x-auto px-2 pt-2 md:max-w-2xl md:justify-around">
+			<div className="no-scrollbar mx-auto flex max-w-lg min-w-0 items-stretch justify-start gap-0.5 overflow-x-auto px-1 pt-2 sm:gap-1 sm:px-2 md:max-w-2xl md:justify-around lg:max-w-4xl">
 				{TABS.map(({ href, label, icon: Icon }) => {
 					const active =
 						href === "/dashboard/member"

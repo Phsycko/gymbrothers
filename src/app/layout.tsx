@@ -55,9 +55,21 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang="es-MX" className="dark">
-			<body className="min-h-screen bg-slate-950">
+			<body className="min-h-screen min-w-0 overflow-x-hidden bg-slate-950 antialiased">
 				{children}
-				<Toaster position="top-right" richColors closeButton />
+				<Toaster
+					position="top-center"
+					richColors
+					closeButton
+					offset="max(0.75rem, env(safe-area-inset-top, 0px))"
+					mobileOffset="max(0.75rem, env(safe-area-inset-top, 0px))"
+					toastOptions={{
+						classNames: {
+							toast:
+								"max-w-[min(100vw-1.5rem,24rem)] text-[15px] leading-snug sm:max-w-sm sm:text-sm",
+						},
+					}}
+				/>
 			</body>
 		</html>
 	);

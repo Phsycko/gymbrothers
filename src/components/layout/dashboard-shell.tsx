@@ -20,11 +20,13 @@ export function DashboardShell({
 	children,
 }: DashboardShellProps): React.ReactElement {
 	return (
-		<div className="min-h-screen bg-slate-950">
+		<div className="min-h-screen min-w-0 bg-slate-950">
 			<DashboardSidebar />
-			<div className="md:pl-72">
+			<div className="min-w-0 md:pl-72">
 				<DashboardHeader user={user} notificationAlerts={notificationAlerts} />
-				<main className="p-4 md:p-6">{children}</main>
+				<main className="min-w-0 px-3 pb-6 pt-4 sm:px-4 md:p-6 md:pb-8">
+					{children}
+				</main>
 			</div>
 		</div>
 	);

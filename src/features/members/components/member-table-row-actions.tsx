@@ -262,14 +262,14 @@ export function MemberTableRowActions({
 
 	return (
 		<>
-			<div className="flex flex-wrap items-center justify-end gap-2">
+			<div className="flex w-full items-stretch justify-end gap-2 sm:w-auto sm:flex-wrap sm:items-center">
 				<Button
 					type="button"
 					variant="outline"
 					size="sm"
 					onClick={onViewQr}
 					className={cn(
-						"h-9 gap-2 border-slate-800 bg-black/30 text-xs font-bold uppercase tracking-wide text-white",
+						"h-11 min-h-[44px] flex-1 gap-2 border-slate-800 bg-black/30 text-xs font-bold uppercase tracking-wide text-white sm:h-9 sm:min-h-0 sm:flex-initial touch-manipulation",
 						"hover:border-[#E11D48]/60 hover:bg-[#E11D48]/10 hover:text-white",
 					)}
 				>
@@ -284,7 +284,7 @@ export function MemberTableRowActions({
 							type="button"
 							variant="outline"
 							size="icon"
-							className="h-9 w-9 shrink-0 border-slate-800 bg-black/30 text-white hover:bg-slate-800/80"
+							className="h-11 min-h-[44px] w-11 min-w-[44px] shrink-0 border-slate-800 bg-black/30 text-white hover:bg-slate-800/80 sm:h-9 sm:min-h-0 sm:w-9 touch-manipulation"
 							aria-label={`Acciones para ${member.fullName}`}
 						>
 							<MoreHorizontal className="h-4 w-4" />

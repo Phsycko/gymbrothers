@@ -69,7 +69,11 @@ export function MembersView({
 				/>
 			</div>
 
-			<MemberTable members={filtered} emptyMessage={emptyMessage} />
+			<MemberTable
+				members={filtered}
+				emptyMessage={emptyMessage}
+				plans={plans}
+			/>
 		</div>
 	);
 }

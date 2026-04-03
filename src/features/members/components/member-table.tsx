@@ -21,9 +21,10 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { isMembershipActiveFromEndDate } from "@/features/member-portal/lib/subscription-status";
+import type { PlanPickerPlan } from "@/features/members/components/add-member-form";
 import { shouldPulseExpiryAlert } from "@/features/members/lib/expiry-alert";
 import type { MemberListRow } from "@/features/members/lib/get-members";
-import { isMembershipActiveFromEndDate } from "@/features/member-portal/lib/subscription-status";
 import { cn } from "@/lib/utils";
 
 import type { Member } from "@/server/db/schema/gym-schema";
@@ -89,11 +90,13 @@ function MembershipStatusBadge({
 export interface MemberTableProps {
 	members: MemberListRow[];
 	emptyMessage: string;
+	plans: PlanPickerPlan[];
 }
 
 export function MemberTable({
 	members,
 	emptyMessage,
+	plans,
 }: MemberTableProps): React.ReactElement {
 	const [preview, setPreview] = useState<{
 		fullName: string;
@@ -219,6 +222,7 @@ export function MemberTable({
 										<TableCell className="text-right">
 											<MemberTableRowActions
 												member={m}
+												plans={plans}
 												onViewQr={() =>
 													setPreview({
 														fullName: m.fullName,

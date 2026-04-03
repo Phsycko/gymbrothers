@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 
 import { parseISO, startOfDay } from "date-fns";
-import { and, eq, ne } from "drizzle-orm";
+import { and, desc, eq, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -61,6 +61,10 @@ const updateMemberSchema = z.object({
 	email: z.string().trim().email("Correo inválido").max(320),
 	phone: z.string().trim().max(32),
 	status: z.enum(["active", "inactive", "past_due"]),
+	planId: z.string().uuid("Elige un plan"),
+	startDate: z
+		.string()
+		.regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de fecha inválido (AAAA-MM-DD)"),
 });
 
 export type UpdateMemberInput = z.infer<typeof updateMemberSchema>;
@@ -87,57 +91,148 @@ export async function updateMemberAction(
 		};
 	}
 
-	const { memberId, fullName, email, phone, status } = parsed.data;
+	const {
+		memberId,
+		fullName,
+		email,
+		phone,
+		status,
+		planId,
+		startDate: startDateRaw,
+	} = parsed.data;
+
+	const startDateParsed = startOfDay(parseISO(startDateRaw));
+	if (Number.isNaN(startDateParsed.getTime())) {
+		return {
+			ok: false,
+			error: "Fecha de inicio inválida.",
+			fieldErrors: { startDate: ["Elige una fecha válida"] },
+		};
+	}
+
+	let plan: NonNullable<Awaited<ReturnType<typeof selectActivePlanById>>>;
+	try {
+		const row = await selectActivePlanById(planId);
+		if (!row) {
+			return {
+				ok: false,
+				error: "El plan seleccionado no está disponible.",
+				fieldErrors: { planId: ["Elige otro plan"] },
+			};
+		}
+		plan = row;
+	} catch {
+		return { ok: false, error: DATABASE_CONNECTION_ERROR };
+	}
+
+	const endDate = computeSubscriptionEndDate(startDateParsed, plan);
 
 	try {
-		const [existing] = await db
-			.select({
-				id: members.id,
-				userId: members.userId,
-			})
-			.from(members)
-			.where(eq(members.id, memberId))
-			.limit(1);
-		if (!existing) {
-			return { ok: false, error: "Socio no encontrado." };
-		}
-
-		const dup = await db
-			.select({ id: members.id })
-			.from(members)
-			.where(and(eq(members.email, email), ne(members.id, memberId)))
-			.limit(1);
-		if (dup.length > 0) {
-			return { ok: false, error: "Ya existe otro socio con este correo." };
-		}
-
-		if (existing.userId) {
-			const dupUser = await db
-				.select({ id: users.id })
-				.from(users)
-				.where(and(eq(users.email, email), ne(users.id, existing.userId)))
+		await db.transaction(async (tx) => {
+			const [existing] = await tx
+				.select({
+					id: members.id,
+					userId: members.userId,
+				})
+				.from(members)
+				.where(eq(members.id, memberId))
 				.limit(1);
-			if (dupUser.length > 0) {
+			if (!existing) {
+				throw new Error("MEMBER_NOT_FOUND");
+			}
+
+			const dup = await tx
+				.select({ id: members.id })
+				.from(members)
+				.where(and(eq(members.email, email), ne(members.id, memberId)))
+				.limit(1);
+			if (dup.length > 0) {
+				throw new Error("DUPLICATE_EMAIL");
+			}
+
+			if (existing.userId) {
+				const dupUser = await tx
+					.select({ id: users.id })
+					.from(users)
+					.where(and(eq(users.email, email), ne(users.id, existing.userId)))
+					.limit(1);
+				if (dupUser.length > 0) {
+					throw new Error("DUPLICATE_USER_EMAIL");
+				}
+				await tx
+					.update(users)
+					.set({ email })
+					.where(eq(users.id, existing.userId));
+			}
+
+			await tx
+				.update(members)
+				.set({ fullName, email, phone, status })
+				.where(eq(members.id, memberId));
+
+			const [latestSub] = await tx
+				.select()
+				.from(subscriptions)
+				.where(eq(subscriptions.memberId, memberId))
+				.orderBy(desc(subscriptions.endDate))
+				.limit(1);
+
+			if (latestSub) {
+				await tx
+					.update(subscriptions)
+					.set({
+						planId: plan.id,
+						startDate: startDateParsed,
+						endDate,
+					})
+					.where(eq(subscriptions.id, latestSub.id));
+			} else {
+				const [sub] = await tx
+					.insert(subscriptions)
+					.values({
+						memberId,
+						planId: plan.id,
+						startDate: startDateParsed,
+						endDate,
+						autoRenew: false,
+					})
+					.returning({ id: subscriptions.id });
+
+				if (!sub) {
+					throw new Error("SUBSCRIPTION_INSERT_FAILED");
+				}
+
+				await tx.insert(payments).values({
+					subscriptionId: sub.id,
+					amountCents: plan.priceCents,
+					status: "completed",
+					providerRef: "manual:member_edit",
+				});
+			}
+		});
+
+		revalidatePath("/dashboard/members");
+		revalidatePath("/dashboard/member");
+		revalidatePath("/dashboard/payments");
+		return { ok: true };
+	} catch (err) {
+		if (err instanceof Error) {
+			if (err.message === "MEMBER_NOT_FOUND") {
+				return { ok: false, error: "Socio no encontrado." };
+			}
+			if (err.message === "DUPLICATE_EMAIL") {
+				return { ok: false, error: "Ya existe otro socio con este correo." };
+			}
+			if (err.message === "DUPLICATE_USER_EMAIL") {
 				return {
 					ok: false,
 					error: "Ese correo ya está en uso por otra cuenta.",
 				};
 			}
-			await db
-				.update(users)
-				.set({ email })
-				.where(eq(users.id, existing.userId));
+			if (err.message === "SUBSCRIPTION_INSERT_FAILED") {
+				return { ok: false, error: "No se pudo crear la suscripción." };
+			}
 		}
-
-		await db
-			.update(members)
-			.set({ fullName, email, phone, status })
-			.where(eq(members.id, memberId));
-
-		revalidatePath("/dashboard/members");
-		revalidatePath("/dashboard/member");
-		return { ok: true };
-	} catch {
 		return { ok: false, error: DATABASE_CONNECTION_ERROR };
 	}
 }

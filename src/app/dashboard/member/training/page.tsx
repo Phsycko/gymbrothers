@@ -6,7 +6,7 @@ import { MemberRoutinesSection } from "@/features/training/components/member-rou
 import { MemberTrainingView } from "@/features/training/components/member-training-view";
 import {
 	getAllExercises,
-	getRoutinesWithExerciseIds,
+	getRoutinesForMember,
 } from "@/features/training/lib/get-training-data";
 
 export default async function MemberTrainingPage(): Promise<React.ReactElement> {
@@ -20,7 +20,7 @@ export default async function MemberTrainingPage(): Promise<React.ReactElement> 
 
 	const [exercises, routines] = await Promise.all([
 		getAllExercises(),
-		getRoutinesWithExerciseIds(),
+		getRoutinesForMember(user.id),
 	]);
 
 	const exercisesById = new Map(exercises.map((e) => [e.id, e]));

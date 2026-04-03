@@ -4,17 +4,18 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { parseLottieJsonString } from "@/features/training/lib/parse-lottie-json";
 import { isAdminRole } from "@/lib/auth/roles";
 import { validateRequest } from "@/lib/auth/validate-request";
 import { db } from "@/server/db/client";
 import { DATABASE_CONNECTION_ERROR } from "@/server/db/env";
 import {
 	exercises,
+	members,
 	routineExercises,
 	routines,
 } from "@/server/db/schema/gym-schema";
 import type { Exercise } from "@/server/db/schema/gym-schema";
-import { parseLottieJsonString } from "@/features/training/lib/parse-lottie-json";
 
 const muscleGroupSchema = z.enum([
 	"chest",
@@ -42,7 +43,10 @@ const exerciseUpsertSchema = z
 	})
 	.superRefine((data, ctx) => {
 		const lottieTrim = data.lottieJson.trim();
-		if (lottieTrim.length > 0 && parseLottieJsonString(data.lottieJson) === null) {
+		if (
+			lottieTrim.length > 0 &&
+			parseLottieJsonString(data.lottieJson) === null
+		) {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
 				message:
@@ -89,10 +93,20 @@ const exerciseIdSchema = z.object({
 	exerciseId: z.string().uuid(),
 });
 
+const assignedUserIdField = z
+	.union([z.string().uuid(), z.literal("")])
+	.optional()
+	.transform((v) => (v === undefined || v === "" ? null : v));
+
 const routineSchema = z.object({
 	name: z.string().trim().min(1).max(255),
 	description: z.string().default(""),
 	level: z.enum(["beginner", "pro"]),
+	assignedUserId: assignedUserIdField,
+});
+
+const updateRoutineSchema = routineSchema.extend({
+	routineId: z.string().uuid(),
 });
 
 const routineIdSchema = z.object({
@@ -112,6 +126,24 @@ async function requireStaff(): Promise<
 		return { ok: false, error: "No autorizado." };
 	}
 	return { ok: true };
+}
+
+/** Ensures assigned user is a member row with that login (user_id). */
+async function assertAssignedUserIsMember(
+	assignedUserId: string | null,
+): Promise<string | null> {
+	if (assignedUserId === null) {
+		return null;
+	}
+	const row = await db
+		.select({ id: members.id })
+		.from(members)
+		.where(eq(members.userId, assignedUserId))
+		.limit(1);
+	if (row.length === 0) {
+		return "El socio seleccionado debe tener cuenta de acceso.";
+	}
+	return null;
 }
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -193,7 +225,9 @@ export async function updateExerciseAction(
 	}
 }
 
-export async function deleteExerciseAction(input: unknown): Promise<ActionResult> {
+export async function deleteExerciseAction(
+	input: unknown,
+): Promise<ActionResult> {
 	const gate = await requireStaff();
 	if (!gate.ok) {
 		return { ok: false, error: gate.error };
@@ -207,7 +241,9 @@ export async function deleteExerciseAction(input: unknown): Promise<ActionResult
 			await tx
 				.delete(routineExercises)
 				.where(eq(routineExercises.exerciseId, parsed.data.exerciseId));
-			await tx.delete(exercises).where(eq(exercises.id, parsed.data.exerciseId));
+			await tx
+				.delete(exercises)
+				.where(eq(exercises.id, parsed.data.exerciseId));
 		});
 		revalidatePath("/dashboard/admin/training");
 		revalidatePath("/dashboard/member/training");
@@ -217,7 +253,9 @@ export async function deleteExerciseAction(input: unknown): Promise<ActionResult
 	}
 }
 
-export async function createRoutineAction(input: unknown): Promise<ActionResult> {
+export async function createRoutineAction(
+	input: unknown,
+): Promise<ActionResult> {
 	const gate = await requireStaff();
 	if (!gate.ok) {
 		return { ok: false, error: gate.error };
@@ -226,11 +264,18 @@ export async function createRoutineAction(input: unknown): Promise<ActionResult>
 	if (!parsed.success) {
 		return { ok: false, error: "Datos inválidos" };
 	}
+	const assignErr = await assertAssignedUserIsMember(
+		parsed.data.assignedUserId,
+	);
+	if (assignErr) {
+		return { ok: false, error: assignErr };
+	}
 	try {
 		await db.insert(routines).values({
 			name: parsed.data.name,
 			description: parsed.data.description,
 			level: parsed.data.level,
+			assignedUserId: parsed.data.assignedUserId,
 		});
 		revalidatePath("/dashboard/admin/training");
 		revalidatePath("/dashboard/member/training");
@@ -240,7 +285,44 @@ export async function createRoutineAction(input: unknown): Promise<ActionResult>
 	}
 }
 
-export async function deleteRoutineAction(input: unknown): Promise<ActionResult> {
+export async function updateRoutineAction(
+	input: unknown,
+): Promise<ActionResult> {
+	const gate = await requireStaff();
+	if (!gate.ok) {
+		return { ok: false, error: gate.error };
+	}
+	const parsed = updateRoutineSchema.safeParse(input);
+	if (!parsed.success) {
+		return { ok: false, error: "Datos inválidos" };
+	}
+	const assignErr = await assertAssignedUserIsMember(
+		parsed.data.assignedUserId,
+	);
+	if (assignErr) {
+		return { ok: false, error: assignErr };
+	}
+	try {
+		await db
+			.update(routines)
+			.set({
+				name: parsed.data.name,
+				description: parsed.data.description,
+				level: parsed.data.level,
+				assignedUserId: parsed.data.assignedUserId,
+			})
+			.where(eq(routines.id, parsed.data.routineId));
+		revalidatePath("/dashboard/admin/training");
+		revalidatePath("/dashboard/member/training");
+		return { ok: true };
+	} catch {
+		return { ok: false, error: DATABASE_CONNECTION_ERROR };
+	}
+}
+
+export async function deleteRoutineAction(
+	input: unknown,
+): Promise<ActionResult> {
 	const gate = await requireStaff();
 	if (!gate.ok) {
 		return { ok: false, error: gate.error };

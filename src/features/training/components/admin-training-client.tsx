@@ -32,14 +32,18 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { AddExerciseForm } from "@/features/training/components/add-exercise-form";
 import {
 	createRoutineAction,
 	deleteExerciseAction,
 	deleteRoutineAction,
 	setRoutineExercisesAction,
+	updateRoutineAction,
 } from "@/features/training/actions/training-actions";
-import type { RoutineWithExerciseIds } from "@/features/training/lib/get-training-data";
+import { AddExerciseForm } from "@/features/training/components/add-exercise-form";
+import type {
+	RoutineAssignmentMember,
+	RoutineWithExerciseIds,
+} from "@/features/training/lib/get-training-data";
 import { muscleGroupLabelEs } from "@/features/training/lib/muscle-labels";
 import { parseLottieJsonString } from "@/features/training/lib/parse-lottie-json";
 import { cn } from "@/lib/utils";
@@ -47,12 +51,16 @@ import type { Exercise } from "@/server/db/schema/gym-schema";
 
 type Tab = "exercises" | "routines";
 
+const ROUTINE_GENERAL_VALUE = "general";
+
 export function AdminTrainingClient({
 	exercises: initialExercises,
 	routines: initialRoutines,
+	assignmentMembers,
 }: {
 	exercises: Exercise[];
 	routines: RoutineWithExerciseIds[];
+	assignmentMembers: RoutineAssignmentMember[];
 }): React.ReactElement {
 	const router = useRouter();
 	const [tab, setTab] = useState<Tab>("exercises");
@@ -114,6 +122,7 @@ export function AdminTrainingClient({
 					routines={routines}
 					exercisesById={exercisesById}
 					allExercises={exercises}
+					assignmentMembers={assignmentMembers}
 					onDone={() => router.refresh()}
 				/>
 			)}
@@ -155,7 +164,9 @@ function ExercisesPanel({
 							<TableHead className="text-slate-500">Grupo</TableHead>
 							<TableHead className="text-slate-500">Portada</TableHead>
 							<TableHead className="text-slate-500">Lottie</TableHead>
-							<TableHead className="max-w-[160px] text-slate-500">Video</TableHead>
+							<TableHead className="max-w-[160px] text-slate-500">
+								Video
+							</TableHead>
 							<TableHead className="w-[100px] text-right text-slate-500">
 								Acciones
 							</TableHead>
@@ -174,7 +185,9 @@ function ExercisesPanel({
 						) : (
 							exercises.map((ex) => (
 								<TableRow key={ex.id} className="border-slate-800/50">
-									<TableCell className="font-medium text-white">{ex.name}</TableCell>
+									<TableCell className="font-medium text-white">
+										{ex.name}
+									</TableCell>
 									<TableCell className="text-slate-400">
 										{muscleGroupLabelEs[ex.muscleGroup]}
 									</TableCell>
@@ -187,7 +200,9 @@ function ExercisesPanel({
 									</TableCell>
 									<TableCell className="text-xs">
 										{parseLottieJsonString(ex.lottieJson) ? (
-											<span className="font-medium text-emerald-400/90">JSON</span>
+											<span className="font-medium text-emerald-400/90">
+												JSON
+											</span>
 										) : (
 											<span className="text-slate-600">—</span>
 										)}
@@ -287,17 +302,21 @@ function RoutinesPanel({
 	routines,
 	exercisesById,
 	allExercises,
+	assignmentMembers,
 	onDone,
 }: {
 	routines: RoutineWithExerciseIds[];
 	exercisesById: Map<string, Exercise>;
 	allExercises: Exercise[];
+	assignmentMembers: RoutineAssignmentMember[];
 	onDone: () => void;
 }): React.ReactElement {
 	const [createOpen, setCreateOpen] = useState(false);
 	const [editRoutine, setEditRoutine] = useState<RoutineWithExerciseIds | null>(
 		null,
 	);
+	const [editMetaRoutine, setEditMetaRoutine] =
+		useState<RoutineWithExerciseIds | null>(null);
 
 	return (
 		<div className="space-y-4">
@@ -335,7 +354,30 @@ function RoutinesPanel({
 							<p className="mt-2 text-xs text-slate-500">
 								{r.exerciseIds.length} ejercicio(s)
 							</p>
+							<p className="mt-1 text-xs text-slate-400">
+								{r.assignedUserId ? (
+									<>
+										<span className="text-slate-500">Asignada a: </span>
+										<span className="font-medium text-slate-200">
+											{r.assignedToMemberName ?? "Socio"}
+										</span>
+									</>
+								) : (
+									<span className="text-slate-500">
+										General — visible para todos los socios
+									</span>
+								)}
+							</p>
 							<div className="mt-3 flex flex-wrap gap-2">
+								<Button
+									type="button"
+									size="sm"
+									variant="outline"
+									className="border-slate-700"
+									onClick={() => setEditMetaRoutine(r)}
+								>
+									Editar rutina
+								</Button>
 								<Button
 									type="button"
 									size="sm"
@@ -355,7 +397,9 @@ function RoutinesPanel({
 											if (!confirm(`¿Eliminar rutina "${r.name}"?`)) {
 												return;
 											}
-											const res = await deleteRoutineAction({ routineId: r.id });
+											const res = await deleteRoutineAction({
+												routineId: r.id,
+											});
 											if (res.ok) {
 												toast.success("Rutina eliminada");
 												onDone();
@@ -376,6 +420,15 @@ function RoutinesPanel({
 			<RoutineCreateDialog
 				open={createOpen}
 				onOpenChange={setCreateOpen}
+				assignmentMembers={assignmentMembers}
+				onSuccess={onDone}
+			/>
+
+			<RoutineEditDialog
+				open={editMetaRoutine != null}
+				routine={editMetaRoutine}
+				assignmentMembers={assignmentMembers}
+				onOpenChange={(o) => !o && setEditMetaRoutine(null)}
 				onSuccess={onDone}
 			/>
 
@@ -394,27 +447,36 @@ function RoutinesPanel({
 function RoutineCreateDialog({
 	open,
 	onOpenChange,
+	assignmentMembers,
 	onSuccess,
 }: {
 	open: boolean;
 	onOpenChange: (o: boolean) => void;
+	assignmentMembers: RoutineAssignmentMember[];
 	onSuccess: () => void;
 }): React.ReactElement {
 	const [name, setName] = useState("");
 	const [description, setDescription] = useState("");
 	const [level, setLevel] = useState<"beginner" | "pro">("beginner");
+	const [assignee, setAssignee] = useState<string>(ROUTINE_GENERAL_VALUE);
 	const [pending, setPending] = useState(false);
 
 	async function onSubmit(e: React.FormEvent): Promise<void> {
 		e.preventDefault();
 		setPending(true);
 		try {
-			const r = await createRoutineAction({ name, description, level });
+			const r = await createRoutineAction({
+				name,
+				description,
+				level,
+				assignedUserId: assignee === ROUTINE_GENERAL_VALUE ? "" : assignee,
+			});
 			if (r.ok) {
 				toast.success("Rutina creada");
 				onOpenChange(false);
 				setName("");
 				setDescription("");
+				setAssignee(ROUTINE_GENERAL_VALUE);
 				onSuccess();
 			} else {
 				toast.error(r.error);
@@ -468,10 +530,176 @@ function RoutineCreateDialog({
 								</SelectContent>
 							</Select>
 						</div>
+						<div className="grid gap-2">
+							<Label>Asignar a socio</Label>
+							<Select value={assignee} onValueChange={setAssignee}>
+								<SelectTrigger className="border-slate-800 bg-black/40">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent className="max-h-64">
+									<SelectItem value={ROUTINE_GENERAL_VALUE}>
+										General (todos los socios)
+									</SelectItem>
+									{assignmentMembers.map((m) => (
+										<SelectItem key={m.userId} value={m.userId}>
+											{m.fullName}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							<p className="text-xs text-slate-500">
+								Solo aparecen socios con cuenta de acceso. Una rutina personal
+								solo la ve el asignado; las generales las ve todo el mundo.
+							</p>
+						</div>
 					</div>
 					<DialogFooter>
 						<Button type="submit" disabled={pending} className="bg-[#E11D48]">
 							Crear
+						</Button>
+					</DialogFooter>
+				</form>
+			</DialogContent>
+		</Dialog>
+	);
+}
+
+function RoutineEditDialog({
+	open,
+	routine,
+	assignmentMembers,
+	onOpenChange,
+	onSuccess,
+}: {
+	open: boolean;
+	routine: RoutineWithExerciseIds | null;
+	assignmentMembers: RoutineAssignmentMember[];
+	onOpenChange: (o: boolean) => void;
+	onSuccess: () => void;
+}): React.ReactElement {
+	const [name, setName] = useState("");
+	const [description, setDescription] = useState("");
+	const [level, setLevel] = useState<"beginner" | "pro">("beginner");
+	const [assignee, setAssignee] = useState<string>(ROUTINE_GENERAL_VALUE);
+	const [pending, setPending] = useState(false);
+
+	useEffect(() => {
+		if (open && routine) {
+			setName(routine.name);
+			setDescription(routine.description);
+			setLevel(routine.level);
+			setAssignee(routine.assignedUserId ?? ROUTINE_GENERAL_VALUE);
+		}
+	}, [open, routine]);
+
+	async function onSubmit(e: React.FormEvent): Promise<void> {
+		e.preventDefault();
+		if (!routine) {
+			return;
+		}
+		setPending(true);
+		try {
+			const r = await updateRoutineAction({
+				routineId: routine.id,
+				name,
+				description,
+				level,
+				assignedUserId: assignee === ROUTINE_GENERAL_VALUE ? "" : assignee,
+			});
+			if (r.ok) {
+				toast.success("Rutina actualizada");
+				onOpenChange(false);
+				onSuccess();
+			} else {
+				toast.error(r.error);
+			}
+		} finally {
+			setPending(false);
+		}
+	}
+
+	if (!routine) {
+		return <></>;
+	}
+
+	return (
+		<Dialog open={open} onOpenChange={onOpenChange}>
+			<DialogContent className="border-slate-800 bg-slate-950">
+				<form onSubmit={(e) => void onSubmit(e)}>
+					<DialogHeader>
+						<DialogTitle>Editar rutina</DialogTitle>
+						<DialogDescription>
+							Nombre, descripción, nivel y a qué socio está asignada.
+						</DialogDescription>
+					</DialogHeader>
+					<div className="grid gap-3 py-4">
+						<div className="grid gap-2">
+							<Label>Nombre</Label>
+							<Input
+								value={name}
+								onChange={(e) => setName(e.target.value)}
+								required
+								className="border-slate-800 bg-black/40"
+							/>
+						</div>
+						<div className="grid gap-2">
+							<Label>Descripción</Label>
+							<Textarea
+								value={description}
+								onChange={(e) => setDescription(e.target.value)}
+								rows={2}
+								className="border-slate-800 bg-black/40"
+							/>
+						</div>
+						<div className="grid gap-2">
+							<Label>Nivel</Label>
+							<Select
+								value={level}
+								onValueChange={(v) => setLevel(v as "beginner" | "pro")}
+							>
+								<SelectTrigger className="border-slate-800 bg-black/40">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="beginner">Principiante</SelectItem>
+									<SelectItem value="pro">Pro</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="grid gap-2">
+							<Label>Asignar a socio</Label>
+							<Select value={assignee} onValueChange={setAssignee}>
+								<SelectTrigger className="border-slate-800 bg-black/40">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent className="max-h-64">
+									<SelectItem value={ROUTINE_GENERAL_VALUE}>
+										General (todos los socios)
+									</SelectItem>
+									{routine.assignedUserId &&
+									!assignmentMembers.some(
+										(m) => m.userId === routine.assignedUserId,
+									) ? (
+										<SelectItem value={routine.assignedUserId}>
+											{routine.assignedToMemberName ??
+												"Socio actual (no en listado)"}
+										</SelectItem>
+									) : null}
+									{assignmentMembers.map((m) => (
+										<SelectItem key={m.userId} value={m.userId}>
+											{m.fullName}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							<p className="text-xs text-slate-500">
+								Solo aparecen socios con cuenta de acceso.
+							</p>
+						</div>
+					</div>
+					<DialogFooter>
+						<Button type="submit" disabled={pending} className="bg-[#E11D48]">
+							Guardar
 						</Button>
 					</DialogFooter>
 				</form>
@@ -577,7 +805,9 @@ function RoutineOrderDialog({
 					<div>
 						<Label className="text-slate-400">Añadir ejercicio</Label>
 						{available.length === 0 ? (
-							<p className="mt-1 text-sm text-slate-500">Todos los ejercicios están en la lista.</p>
+							<p className="mt-1 text-sm text-slate-500">
+								Todos los ejercicios están en la lista.
+							</p>
 						) : (
 							<Select
 								key={pickerKey}
@@ -606,7 +836,7 @@ function RoutineOrderDialog({
 								const ex = exercisesById.get(id);
 								return (
 									<li
-										key={`${id}-${i}`}
+										key={id}
 										className="flex items-center gap-2 rounded-lg border border-slate-800 bg-red-600/10 px-2 py-2"
 									>
 										<span className="w-6 text-center text-xs font-bold text-[#E11D48]">
@@ -651,7 +881,11 @@ function RoutineOrderDialog({
 					</ol>
 				</div>
 				<DialogFooter>
-					<Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+					<Button
+						type="button"
+						variant="outline"
+						onClick={() => onOpenChange(false)}
+					>
 						Cerrar
 					</Button>
 					<Button

@@ -225,19 +225,27 @@ export const exercises = pgTable(
 	(table) => [index("exercises_muscle_group_idx").on(table.muscleGroup)],
 );
 
-export const routines = pgTable("routines", {
-	id: uuid("id").defaultRandom().primaryKey(),
-	name: varchar("name", { length: 255 }).notNull(),
-	description: text("description").notNull().default(""),
-	level: routineLevelEnum("level").notNull(),
-	createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
-		.defaultNow()
-		.notNull(),
-	updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
-		.defaultNow()
-		.notNull()
-		.$onUpdate(() => new Date()),
-});
+export const routines = pgTable(
+	"routines",
+	{
+		id: uuid("id").defaultRandom().primaryKey(),
+		name: varchar("name", { length: 255 }).notNull(),
+		description: text("description").notNull().default(""),
+		level: routineLevelEnum("level").notNull(),
+		/** When set, only this login user sees the routine in the member app; when null, all members see it. */
+		assignedUserId: uuid("assigned_user_id").references(() => users.id, {
+			onDelete: "set null",
+		}),
+		createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+			.defaultNow()
+			.notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+			.defaultNow()
+			.notNull()
+			.$onUpdate(() => new Date()),
+	},
+	(table) => [index("routines_assigned_user_id_idx").on(table.assignedUserId)],
+);
 
 export const routineExercises = pgTable(
 	"routine_exercises",

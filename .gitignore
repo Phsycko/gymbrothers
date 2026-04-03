@@ -1,0 +1,32 @@
+# dependencies
+node_modules
+.pnp
+.pnp.js
+
+# build
+.next
+out
+build
+dist
+
+# env
+.env
+.env.local
+.env.*.local
+
+# debug
+npm-debug.log*
+
+# ide
+.idea
+.vscode
+*.swp
+
+# os
+.DS_Store
+Thumbs.db
+
+# testing
+coverage
+playwright-report
+test-results

@@ -6,14 +6,17 @@ import {
 	LayoutDashboard,
 	Megaphone,
 	Menu,
+	MessageSquare,
 	Settings,
 	Users,
 	Wallet,
+	Wrench,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
+import { AppLogo } from "@/components/branding/app-logo";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -26,6 +29,16 @@ const NAV: { href: string; label: string; icon: typeof LayoutDashboard }[] = [
 		href: "/dashboard/admin/training",
 		label: "Entrenamiento",
 		icon: Dumbbell,
+	},
+	{
+		href: "/dashboard/exercise-requests",
+		label: "Solicitudes",
+		icon: MessageSquare,
+	},
+	{
+		href: "/dashboard/equipment-reports",
+		label: "Averías",
+		icon: Wrench,
 	},
 	{
 		href: "/dashboard/subscription-plans",
@@ -92,10 +105,9 @@ export function DashboardSidebar(): React.ReactElement {
 								<p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#E11D48]">
 									Centro de control
 								</p>
-								<p className="text-lg font-extrabold tracking-tight">
-									<span className="text-white">GYM </span>
-									<span className="text-[#E11D48]">BROTHERS</span>
-								</p>
+								<div className="mt-3">
+									<AppLogo size="md" href="/dashboard" priority />
+								</div>
 							</div>
 							<ScrollArea className="flex-1">
 								<NavLinks onNavigate={() => setOpen(false)} />
@@ -103,9 +115,7 @@ export function DashboardSidebar(): React.ReactElement {
 						</div>
 					</SheetContent>
 				</Sheet>
-				<span className="font-extrabold tracking-tight text-white">
-					GYM <span className="text-[#E11D48]">BROTHERS</span>
-				</span>
+				<AppLogo size="sm" href="/dashboard" priority />
 			</div>
 
 			<aside className="fixed left-0 top-0 z-40 hidden h-screen w-72 flex-col border-r border-slate-800/80 bg-slate-950/50 backdrop-blur-md md:flex">
@@ -113,21 +123,19 @@ export function DashboardSidebar(): React.ReactElement {
 					<p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#E11D48]">
 						Operaciones
 					</p>
-					<p className="text-xl font-extrabold tracking-tight">
-						<span className="text-white">GYM </span>
-						<span className="text-[#E11D48] drop-shadow-[0_0_14px_rgba(225,29,72,0.35)]">
-							BROTHERS
-						</span>
-					</p>
-					<p className="mt-1 text-xs text-slate-500">
+					<div className="mt-3">
+						<AppLogo size="lg" href="/dashboard" priority />
+					</div>
+					<p className="mt-2 text-xs text-slate-500">
 						Membresías e ingresos en un solo lugar
 					</p>
 				</div>
 				<ScrollArea className="flex-1">
 					<NavLinks />
 				</ScrollArea>
-				<div className="border-t border-slate-800/80 p-4 text-xs text-slate-500">
-					GYM BROTHERS · MVP
+				<div className="flex items-center gap-2 border-t border-slate-800/80 p-4 text-xs text-slate-500">
+					<AppLogo size="sm" className="max-w-[100px] opacity-80" />
+					<span>· MVP</span>
 				</div>
 			</aside>
 		</>

@@ -52,6 +52,13 @@ export const muscleGroupEnum = pgEnum("muscle_group", [
 
 export const routineLevelEnum = pgEnum("routine_level", ["beginner", "pro"]);
 
+/** Equipment damage report lifecycle (member ↔ staff). */
+export const equipmentReportStatusEnum = pgEnum("equipment_report_status", [
+	"open",
+	"in_progress",
+	"resolved",
+]);
+
 export const users = pgTable("users", {
 	id: uuid("id").defaultRandom().primaryKey(),
 	username: varchar("username", { length: 64 }).notNull().unique(),
@@ -103,6 +110,8 @@ export const plans = pgTable("plans", {
 	description: text("description").notNull().default(""),
 	priceCents: integer("price_cents").notNull(),
 	durationMonths: integer("duration_months").notNull(),
+	/** When set (e.g. 1), subscription length uses weeks; otherwise {@link durationMonths}. */
+	durationWeeks: integer("duration_weeks"),
 	active: boolean("active").notNull().default(true),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
 		.defaultNow()
@@ -177,6 +186,74 @@ export const announcements = pgTable(
 	(table) => [index("announcements_created_at_idx").on(table.createdAt)],
 );
 
+/** Web Push subscription per device (VAPID); one row per push endpoint. */
+export const pushSubscriptions = pgTable(
+	"push_subscriptions",
+	{
+		id: uuid("id").defaultRandom().primaryKey(),
+		userId: uuid("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		endpoint: text("endpoint").notNull().unique(),
+		p256dh: text("p256dh").notNull(),
+		auth: text("auth").notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+			.defaultNow()
+			.notNull(),
+	},
+	(table) => [index("push_subscriptions_user_id_idx").on(table.userId)],
+);
+
+/** Member-submitted ideas for exercises to add to the library (Comunidad tab). */
+export const exerciseRequests = pgTable(
+	"exercise_requests",
+	{
+		id: uuid("id").defaultRandom().primaryKey(),
+		userId: uuid("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		message: text("message").notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+			.defaultNow()
+			.notNull(),
+	},
+	(table) => [
+		index("exercise_requests_created_at_idx").on(table.createdAt),
+		index("exercise_requests_user_id_idx").on(table.userId),
+	],
+);
+
+/** Member reports of broken or unsafe equipment (Comunidad → panel staff). */
+export const equipmentDamageReports = pgTable(
+	"equipment_damage_reports",
+	{
+		id: uuid("id").defaultRandom().primaryKey(),
+		userId: uuid("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		/** Short label, e.g. "Press inclinado", "Cinta 2". */
+		machineName: varchar("machine_name", { length: 120 }).notNull(),
+		message: text("message").notNull(),
+		/** Same enum as anuncios: baja / media / alta. */
+		priority: announcementPriorityEnum("priority").notNull().default("medium"),
+		status: equipmentReportStatusEnum("status").notNull().default("open"),
+		/** Optional note from staff; visible to all members on this report. */
+		staffNote: text("staff_note"),
+		createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+			.defaultNow()
+			.notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+			.defaultNow()
+			.notNull()
+			.$onUpdate(() => new Date()),
+	},
+	(table) => [
+		index("equipment_damage_reports_created_at_idx").on(table.createdAt),
+		index("equipment_damage_reports_user_id_idx").on(table.userId),
+		index("equipment_damage_reports_status_idx").on(table.status),
+	],
+);
+
 export const exercises = pgTable(
 	"exercises",
 	{
@@ -211,6 +288,10 @@ export const routines = pgTable(
 		name: varchar("name", { length: 255 }).notNull(),
 		description: text("description").notNull().default(""),
 		level: routineLevelEnum("level").notNull(),
+		/** When set, only this login user sees the routine in the member app; when null, all members see it. */
+		assignedUserId: uuid("assigned_user_id").references(() => users.id, {
+			onDelete: "set null",
+		}),
 		createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
 			.defaultNow()
 			.notNull(),
@@ -219,6 +300,7 @@ export const routines = pgTable(
 			.notNull()
 			.$onUpdate(() => new Date()),
 	},
+	(table) => [index("routines_assigned_user_id_idx").on(table.assignedUserId)],
 );
 
 export const routineExercises = pgTable(
@@ -243,6 +325,9 @@ export type Member = typeof members.$inferSelect;
 export type Plan = typeof plans.$inferSelect;
 export type Subscription = typeof subscriptions.$inferSelect;
 export type Announcement = typeof announcements.$inferSelect;
+export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
+export type ExerciseRequest = typeof exerciseRequests.$inferSelect;
+export type EquipmentDamageReport = typeof equipmentDamageReports.$inferSelect;
 export type Exercise = typeof exercises.$inferSelect;
 export type Routine = typeof routines.$inferSelect;
 export type RoutineExercise = typeof routineExercises.$inferSelect;

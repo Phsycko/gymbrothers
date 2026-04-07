@@ -1,0 +1,1 @@
+ALTER TABLE "equipment_damage_reports" ADD COLUMN "priority" "announcement_priority" DEFAULT 'medium' NOT NULL;
